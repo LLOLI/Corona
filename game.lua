@@ -39,8 +39,8 @@ function scene:create( event )
     -- Initialize the scene here.
     -- Example: add display objects to "sceneGroup", add touch listeners, etc.
     --背景
-    local bg = display.newImageRect( "background_Green_480x320.jpg", 480, 320 )
-    local bg1 = display.newImageRect( "background_Green_480x320.jpg", 480, 320 )
+    local bg = display.newImageRect( "background_Green_480x3202.jpg", 480, 320 )
+    local bg1 = display.newImageRect( "background_Green_480x3202.jpg", 480, 320 )
        bg.anchorX = 0
        bg.x = 0
        bg.y = centerY

@@ -47,8 +47,8 @@ function scene:create( event )
  
     local sceneGroup = self.view
     -- Code here runs when the scene is first created but has not yet appeared on screen
-    local bg = display.newImageRect( "background_Green_480x3202.jpg", 480, 320 )
-    local bg1 = display.newImageRect( "background_Green_480x3202.jpg", 480, 320 )
+    local bg = display.newImageRect( "background_Green_480x320.png", 480, 320 )
+    local bg1 = display.newImageRect( "background_Green_480x320.png", 480, 320 )
        bg.anchorX = 0
        bg.x = 0
        bg.y = centerY
