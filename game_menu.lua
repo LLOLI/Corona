@@ -44,11 +44,15 @@ print( imageSuffix  )
  
 -- create()
 function scene:create( event )
- 
+ --讀取聲音
+ sounds = {
+  menu = audio.loadSound("menu.mp3"),
+  start = audio.loadSound("start.wav"),
+}
     local sceneGroup = self.view
     -- Code here runs when the scene is first created but has not yet appeared on screen
-    local bg = display.newImageRect( "background_Green_480x3202.jpg", 480, 320 )
-    local bg1 = display.newImageRect( "background_Green_480x3202.jpg", 480, 320 )
+    local bg = display.newImageRect( "background_Green_480x320.png", 480, 320 )
+    local bg1 = display.newImageRect( "background_Green_480x320.png", 480, 320 )
        bg.anchorX = 0
        bg.x = 0
        bg.y = centerY
@@ -167,6 +171,10 @@ local function menuTouch(event)
   if event.phase=="began" then
     print("touch_"..event.target.name)
     if event.target.name == "play" then
+      audio.play( sounds.start,{channel=2,onComplete = function() 
+                                      audio.dispose( sounds.start ) 
+                                      sounds.start=nil
+                                      end})
       transition.to(menu,  {time = 400, x = 480+event.target.contentWidth/2,onComplete = changeScene})
     else
       os.exit ( )
@@ -201,9 +209,12 @@ function scene:show( event )
         transition.to(title,  {time = 400, y = centerY*0.6})
         transition.to(menu,  {time = 400, x = centerX,onComplete = addTouch})--將menu群組的x座標移往centerX,移動完成呼叫addTouch函式
     elseif ( phase == "did" ) then
+      -- Code here runs when the scene is entirely on screen
         composer.removeScene("game") --移除上個場景
         print("menu")
-        -- Code here runs when the scene is entirely on screen
+        
+        audio.play( sounds.menu, { channel=1, loops=-1})
+        
  
     end
 end
@@ -217,6 +228,11 @@ function scene:hide( event )
  
     if ( phase == "will" ) then
         -- Code here runs when the scene is on screen (but is about to go off screen)
+        audio.stop(1)
+
+        audio.dispose( sounds.menu )
+        sounds.menu = nil
+
         Runtime:removeEventListener( "enterFrame", move )
     elseif ( phase == "did" ) then
         -- Code here runs immediately after the scene goes entirely off screen
