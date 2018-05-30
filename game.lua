@@ -14,8 +14,11 @@
 local composer=require ("composer")
 
 local scene=composer.newScene()
-
-
+--加入物理引擎
+local physics = require("physics")
+physics.start()
+physics.setGravity(0, 0)
+-- physics.setDrawMode( "hybrid" ) -- 顯示碰撞範圍
 -- -------------------------------------------------------------------------------
 local centerX = display.contentCenterX
 local centerY = display.contentCenterY
@@ -27,6 +30,8 @@ local ship
 local fireTimer
 local bulletGroup=display.newGroup()
 local enemies = display.newGroup()
+--爆炸群組
+local explosionGroup = display.newGroup()
 local checkMemoryTimer
 
 local numEnemy = 0
@@ -35,12 +40,17 @@ local enemyArray = {}
 function scene:create( event )
 
     local sceneGroup = self.view
-
+    --預先載入音效
+    sounds = {
+	music = audio.loadSound("gameMusic.mp3"),
+	laser = audio.loadSound("laserFire.wav"),
+	explosion = audio.loadSound("explosion.wav"),
+   }
     -- Initialize the scene here.
     -- Example: add display objects to "sceneGroup", add touch listeners, etc.
     --背景
-    local bg = display.newImageRect( "background_Green_480x320.jpg", 480, 320 )
-    local bg1 = display.newImageRect( "background_Green_480x320.jpg", 480, 320 )
+    local bg = display.newImageRect( "background_Green_480x320.png", 480, 320 )
+    local bg1 = display.newImageRect( "background_Green_480x320.png", 480, 320 )
        bg.anchorX = 0
        bg.x = 0
        bg.y = centerY
@@ -103,8 +113,9 @@ function scene:create( event )
 	enemies:toFront()
 	
 	
-	enemyArray[numEnemy]  = display.newImage(enemySheet, { name="enemy", start=1, count=3, time=200 } )
-			physics.addBody ( enemyArray[numEnemy] , { isSensor = true,bounce = 0})
+	enemyArray[numEnemy]  = display.newSprite(enemySheet, { name="enemy", start=1, count=3, time=1000 } )
+	        enemyArray[numEnemy] :play() 
+			physics.addBody ( enemyArray[numEnemy] , { isSensor = true,bounce = 0})--加入物理鋼體
 			enemyArray[numEnemy].name = "enemy" 
 			-- startlocationX = math.random (0, display.contentWidth)
 			startlocationX = centerX*1.7
@@ -114,8 +125,9 @@ function scene:create( event )
 			enemyArray[numEnemy] .y = startlocationY
 		
 			transition.to ( enemyArray[numEnemy] , { time = math.random (6000, 10000), x= -50, y=enemyArray[numEnemy] .y } )
+
 			enemies:insert(enemyArray[numEnemy] )
-	
+	        
  end
  
 local i
@@ -158,18 +170,21 @@ local function move(event)
 end
 
 local function removeBullet( obj )
-	print("removeBullet")
-	
-	--bulletGroup:remove(obj)
+	--print("removeObject")
+	transition.cancel( obj )
+	-- bulletGroup:remove( obj )
 	obj:removeSelf()
 	obj=nil
-	print("bulletGroup numChildren".. bulletGroup.numChildren)
+	--print("bulletGroup numChildren".. bulletGroup.numChildren)
 end
 
 local function fire(  )
+	audio.play( sounds.laser )
 	print( "fire" )
 	local bullet = display.newImage( "laser.png",ship.x+30,ship.y)
-	transition.to(bullet,  {time = 500, x = display.viewableContentWidth+bullet.contentWidth/2,onComplete =removeBullet})
+	transition.to(bullet,  {time = 750, x = display.viewableContentWidth+bullet.contentWidth/2,onComplete =removeBullet})
+	physics.addBody(bullet, "dynamic", {bounce = 0})--加入物理鋼體
+	bullet.name = "bullet"
 	bulletGroup:insert(bullet)
 	print("bulletGroup numChildren".. bulletGroup.numChildren)
 end
@@ -177,19 +192,23 @@ end
 
 local function shipTouch(event)
 	if event.phase=="began" then
-
+    
 		print("shipTouch_began")
 		fireTimer=timer.performWithDelay( 100, fire,0)
+		display.getCurrentStage():setFocus(event.target)
 	elseif ( event.phase == "moved" ) then
 		--讓飛船位置＝點擊位置
+	    
         if  event.x >= ship.contentWidth/2 and event.x <= display.viewableContentWidth - ship.contentWidth/2 then
         		ship.x=event.x
+
 		 end
 		 if  event.y >= ship.contentHeight/2 and event.y <= display.viewableContentHeight - ship.contentHeight/2 then
         		ship.y=event.y
 		 end
         --print( "touch location in content coordinates = "..event.x..","..event.y )
     elseif ( event.phase == "ended" ) then
+        display.getCurrentStage():setFocus(nil)
         print("shipTouch_ended")
         timer.cancel ( fireTimer )
         fireTimer=nil
@@ -205,7 +224,50 @@ end
 		composer.gotoScene("menu",{effect ="fade",time=400})
 	end
 end]]
+--移除爆炸
+local function removExplode( obj )
+    return function()
+    obj:removeSelf() 
+    obj=nil
+    --print("explosionGroup numChildren".. explosionGroup.numChildren)
+end 
+end
+--加入爆炸
+local function explode( x,y )
+	local explosionOptions =
+	{	
+	    width = 55,
+	    height = 55,
+	    numFrames = 15,
+	    sheetContentWidth = 825,  
+	    sheetContentHeight = 55  
+	}
+	local explosionSheet = graphics.newImageSheet( "explosion1.png", explosionOptions )
+	local explosion = display.newSprite( explosionSheet, { name="explosion", start=1, count=15, time=1000 ,loopCount = 1 } )
+	explosion.blendMode = "add"
+	explosion.x=x
+	explosion.y=y
+	explosion:play()
+	explosionGroup:insert(explosion)
+	--print("explosionGroup numChildren".. explosionGroup.numChildren)
+	audio.play( sounds.explosion )
+math.random (-500, -100)
+end
 
+
+--加入物理碰撞偵測
+local function onCollision( event )
+    if ( event.phase == "began" ) then
+			if  event.object1.name == "enemy" and event.object2.name == "bullet"  then
+				--子彈碰到敵人,敵人消失
+				print( "began: " .. event.object1.name .. " and " .. event.object2.name )
+				removeBullet(event.object1)
+				--消失同時呼叫爆炸，爆炸位置=敵人消失位置
+				local x,y =event.object1.x,event.object1.y
+				explode(x,y)
+			end
+    end
+end
 
 local function checkMemory()
    collectgarbage( "collect" )
@@ -230,8 +292,10 @@ function scene:show( event )
         -- Example: start timers, begin animation, play audio, etc.
         print("game")
         composer.removeScene("menu")
+        audio.play( sounds.music, { channel=1, loops=-1})
         ship:addEventListener( "touch",  shipTouch );
-        --checkMemoryTimer = timer.performWithDelay( 1000, checkMemory, 0 )
+        Runtime:addEventListener( "collision", onCollision )
+        checkMemoryTimer = timer.performWithDelay( 1000, checkMemory, 0 )
     end
 end
 
@@ -246,8 +310,15 @@ function scene:hide( event )
         -- Called when the scene is on screen (but is about to go off screen).
         -- Insert code here to "pause" the scene.
         -- Example: stop timers, stop animation, stop audio, etc.
+        physics.stop( )
+        audio.stop()
+        for s,v in pairs( sounds ) do
+		    audio.dispose( sounds[s] )
+		    sounds[s] = nil
+		end
          Runtime:removeEventListener( "enterFrame", move );
          ship:removeEventListener( "touch",  changeScene );
+         --Runtime:removeEventListener( "collision", onCollision )
          --timer.cancel ( checkMemoryTimer )
          --checkMemoryTimer=nil
     elseif ( phase == "did" ) then
@@ -264,7 +335,8 @@ function scene:destroy( event )
     -- Called prior to the removal of scene's view ("sceneGroup").
     -- Insert code here to clean up the scene.
     -- Example: remove display objects, save state, etc.
-    
+    package.loaded[physics] = nil
+	physics = nil
 end
 
 

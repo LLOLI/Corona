@@ -13,7 +13,8 @@ application =
 		height = 480,
 		--縮放模式 
 		 --scale = "letterbox",
-		scale = "zoomEven",
+		--scale = "zoomEven",
+		scale = "zoomStretch",
 		--偵數
 		fps = 60,
 		
